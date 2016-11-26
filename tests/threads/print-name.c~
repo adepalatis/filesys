@@ -1,0 +1,17 @@
+/* Prints name when run */
+
+#include "tests/lib.h"
+
+int
+main (int argc, char *argv[]) 
+{
+  int i;
+
+  test_name = "print-name";
+
+  msg ("begin");
+  msg("Linux RY");  
+  msg ("end");
+
+  return 0;
+}

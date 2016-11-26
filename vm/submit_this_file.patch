@@ -1,0 +1,210 @@
+diff --git a/vm/frame.c b/vm/frame.c
+new file mode 100644
+index 0000000..d337ef8
+--- /dev/null
++++ b/vm/frame.c
+@@ -0,0 +1,82 @@
++#include <string.h>
++#include <stdio.h>
++#include <stdbool.h>
++#include "frame.h"
++
++struct frame {
++	struct thread* owner;
++	void* u_page;
++	bool in_use;
++
++	bool pinned;
++};
++
++static struct frame frame_table[367];
++
++void frame_table_init(void) {
++	for(int k = 0; k < 367; k++) {
++		frame_table[k].u_page = palloc_get_page(PAL_USER | PAL_ZERO);
++		frame_table[k].in_use = false;
++		frame_table[k].pinned = false;
++	}
++}
++
++
++static void evict(struct frame* toEvict){
++	struct ste* swap_entry = get_ste();
++	if (swap_entry==NULL){
++		PANIC("No more swap");
++	}
++	struct block* swap_block = swap_entry->swap_block;
++	for (int idx = 0; idx<8 ; idx++){
++		block_write(swap_block, idx, ((int*) toEvict->u_page) + 128*idx);
++	}
++	swap_entry->thread = toEvict->owner;
++	swap_entry->kpage = pagedir_get_page(toEvict->owner->pagedir, toEvict->u_page);
++	pagedir_clear_page(toEvict->owner->pagedir, toEvict->u_page);
++	memset (toEvict->u_page, 0, PGSIZE);
++}
++
++
++// NEED TO IMPLEMENT EVICTION POLICY AND USE IT HERE IF NO PAGES ARE FREE
++/* Finds and returns the first unused, unpinned frame */
++void* get_frame(void) {
++	for(int k = 0; k < 367; k++) {
++		if(!frame_table[k]. in_use && !frame_table[k].pinned) {
++			frame_table[k].owner = thread_current();
++			frame_table[k].in_use = true;
++			return frame_table[k].u_page;
++		}
++	}
++	void* pd = get_pd();
++	for(int k = 0; k < 367; k++) {
++		if (!pagedir_is_accessed(pd, frame_table[k].u_page) && !frame_table[k].pinned){
++			evict(&frame_table[k]);
++			return frame_table[k].u_page;
++		}
++		else{
++			pagedir_set_accessed(pd, frame_table[k].u_page, false);
++		}
++	}
++	for(int k = 0; k < 367; k++) {
++		if (!pagedir_is_accessed(pd, frame_table[k].u_page) && !frame_table[k].pinned){
++			evict(frame_table[k].u_page);
++			return frame_table[k].u_page;
++		}
++	}
++	PANIC("No more free frames");
++	return NULL;
++}
++
++void free_frame(void* u_page) {
++	for(int k = 0; k < 367; k++) {
++		if(frame_table[k].u_page == u_page) {
++			memset(u_page, 0, PGSIZE);
++			frame_table[k].owner = NULL;
++			frame_table[k].in_use = false;
++			frame_table[k].pinned = false;
++		}
++	}
++}
++
++
+diff --git a/vm/frame.h b/vm/frame.h
+new file mode 100644
+index 0000000..8028869
+--- /dev/null
++++ b/vm/frame.h
+@@ -0,0 +1,16 @@
++#ifndef FRAME_H 
++#define FRAME_H 
++
++#include "threads/palloc.h"
++#include "threads/vaddr.h"
++#include "threads/thread.h"
++#include "userprog/pagedir.h"
++#include "vm/swap.h"
++#include "devices/block.h"
++#include "threads/vaddr.h"
++
++void frame_table_init(void);
++void* get_frame(void);
++void free_frame(void* u_page);
++
++#endif /* vm/frame.h */
+\ No newline at end of file
+diff --git a/vm/page.c b/vm/page.c
+new file mode 100644
+index 0000000..982e406
+--- /dev/null
++++ b/vm/page.c
+@@ -0,0 +1,3 @@
++#include <string.h>
++#include <stdio.h>
++#include "page.h"
+\ No newline at end of file
+diff --git a/vm/page.h b/vm/page.h
+new file mode 100644
+index 0000000..8083192
+--- /dev/null
++++ b/vm/page.h
+@@ -0,0 +1,4 @@
++#ifndef PAGE_H
++#define PAGE_H 
++
++#endif /* vm/page.h */
+\ No newline at end of file
+diff --git a/vm/swap.c b/vm/swap.c
+new file mode 100644
+index 0000000..baa3596
+--- /dev/null
++++ b/vm/swap.c
+@@ -0,0 +1,45 @@
++#include "vm/swap.h"
++
++struct ste swap_table[1024];
++
++void swap_table_init(void) {
++	for(int k = 0; k < 1024; k++) {
++		swap_table[k].thread = NULL;
++		swap_table[k].kpage = NULL;
++		swap_table[k].swap_block = block_get_role(BLOCK_SWAP);
++	}
++}
++
++struct ste* get_ste(void) {
++	for(int k = 0; k < 1024; k++) {
++		if(swap_table[k].thread == NULL) {
++			return &swap_table[k];
++		}
++	}
++	return NULL;
++}
++
++bool load_to_mem(void* kpage, struct thread* process){
++	struct ste* swap_entry = get_ste_for_thread(kpage, process);
++	if (swap_entry==NULL){
++		return false;
++	}
++	void* page = get_frame();
++	for (int idx = 0; idx<8 ; idx++){
++		//write all blocks to the newly allocated page from the block
++		block_read(swap_entry->swap_block, idx, ((int*)page) + 128*idx);
++	}
++	pagedir_set_page(process->pagedir, page, kpage, true);
++	swap_entry->thread = NULL;
++	return true;
++}
++
++struct ste* get_ste_for_thread(void* kpage, struct thread* process) {
++	for(int k = 0; k < 1024; k++) {
++		if(swap_table[k].thread == process && swap_table[k].kpage == kpage) {
++			return &swap_table[k];
++		}
++	}
++	// PANIC("Page not found for thread in swap table");
++	return NULL;
++}
+diff --git a/vm/swap.h b/vm/swap.h
+new file mode 100644
+index 0000000..957cfa1
+--- /dev/null
++++ b/vm/swap.h
+@@ -0,0 +1,20 @@
++#ifndef SWAP_H 
++#define SWAP_H 
++
++#include "devices/block.h"
++#include "devices/ide.h"
++#include <debug.h>
++#include "frame.h"
++
++struct ste {
++	struct thread* thread;
++	void* kpage;
++	struct block* swap_block;
++};
++
++void swap_table_init(void);
++struct ste* get_ste(void);
++struct ste* get_ste_for_thread(void* kpage, struct thread* process);
++bool load_to_mem(void* kpage, struct thread* process);
++
++#endif /* vm/swap.h */
+\ No newline at end of file
