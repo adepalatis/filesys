@@ -143,23 +143,8 @@ pid_t exec(const char* cmd_line) {
 }
 
 int wait(pid_t pid) {	
-	struct thread* thisThread = thread_current();
-	// printf("IN WAIT: %s\n", thisThread->name);
-	if (in_child_processes(&(thisThread->children), pid)==NULL){
-		return -1;
-	}
-	// printf("AFTER GET CHILD PROCESSES\n");
-	struct thread* dead;
-	if (in_all_threads(pid)!=NULL){
-		int toReturn = process_wait(pid);
-		return toReturn;
-	}
-	else if (dead = in_grave(pid) !=NULL) {
-		return dead->exitCode;
-	}
-	else{
-		return -1;
-	}
+	int toReturn = process_wait(pid);
+	return toReturn;
 }
 
 bool create(const char* file, unsigned initial_size) {
