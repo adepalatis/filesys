@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
+#include "filesys/inode.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/palloc.h"
@@ -191,13 +192,43 @@ mkdir(const char* dir) {
 }
 
 bool 
-readdir(int fd, char* name) {}
+readdir(int fd, char* name) {
+	lock_acquire(&l);
+	struct inode* my_inode = file_get_inode(thread_current()->fd_table[fd]);
+	if(my_inode == NULL) {
+		lock_release(&l);
+		return false;
+	}
+
+	if(!my_inode->data.is_dir) {
+		lock_release(&l);
+		return false;
+	}
+	// bool result = dir_readdir( , name);
+	lock_release(&l);
+	// return result;
+}
 
 bool
-isdir(int fd) {}
+isdir(int fd) {
+	lock_acquire(&l);
+	struct inode* my_inode = file_get_inode(thread_current()->fd_table[fd]);
+	if(my_inode == NULL) {
+		lock_release(&l);
+		return false;
+	}
+	bool result = my_inode->data.is_dir;
+	lock_release(&l);
+	return result;
+}
 
 int 
-inumber(int fd) {}
+inumber(int fd) {
+	lock_acquire(&l);
+	int result = inode_get_inumber(file_get_inode(thread_current()->fd_table[fd]));
+	lock_release(&l);
+	return result;
+}
 
 /* All-purpose syscalls */
 void halt() {
