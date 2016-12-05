@@ -101,7 +101,7 @@ byte_to_sector (const struct inode *inode, off_t pos)
   ASSERT (inode != NULL);
   if (pos < inode->data.length){
     off_t index = pos / BLOCK_SECTOR_SIZE;
-    return get_sector (index, &inode->data);
+    return get_sector (&inode->data, index);
   }
     // return inode->data.start + pos / BLOCK_SECTOR_SIZE;
   else{
@@ -125,6 +125,7 @@ static bool allocate_inode(struct inode_disk* disk){
   if (disk->length==0){
     return true;
   }
+  static char zeros[BLOCK_SECTOR_SIZE];
   int totalSectors = disk->length / BLOCK_SECTOR_SIZE;
   if (totalSectors%BLOCK_SECTOR_SIZE > 0){
     totalSectors += 1;
@@ -136,6 +137,7 @@ static bool allocate_inode(struct inode_disk* disk){
     if (!free_map_allocate (1, &disk->direct[i])){
       return false;
     }
+    block_write (fs_device, disk->direct[i], zeros);
     totalSectors-=1;
   }
   if (totalSectors==0){
@@ -146,9 +148,10 @@ static bool allocate_inode(struct inode_disk* disk){
   }
   struct block_list* indirectBlock = calloc(1, sizeof(struct block_list));
   for (int i=0; i<NUM_I_BLOCKS && totalSectors>0; i++){
-    if (!free_map_allocate (1, indirectBlock->blocks[i])){
+    if (!free_map_allocate (1, &indirectBlock->blocks[i])){
       return false;
     }
+    block_write (fs_device, indirectBlock->blocks[i], zeros);
     totalSectors-=1;
   }
   block_write(fs_device, disk->indirect, indirectBlock);
@@ -159,9 +162,9 @@ static bool allocate_inode(struct inode_disk* disk){
   struct block_list* doubleIndirectBlock = calloc(1, sizeof(struct block_list));
   for (int i=0; i<NUM_I_BLOCKS && totalSectors>0; i++){
     struct block_list* indirectBlock = calloc(1, sizeof(struct block_list));
-    free_map_allocate (1, doubleIndirectBlock->blocks[i]);
+    free_map_allocate (1, &doubleIndirectBlock->blocks[i]);
     for (int i=0; i<NUM_I_BLOCKS && totalSectors>0; i++){
-      if (!free_map_allocate (1, indirectBlock->blocks[i])){
+      if (!free_map_allocate (1, &indirectBlock->blocks[i])){
         return false;
       }
       totalSectors-=1;
@@ -189,9 +192,6 @@ inode_create (block_sector_t sector, off_t length, bool is_dir)
 
   /* If this assertion fails, the inode structure is not exactly
      one sector in size, and you should fix that. */
-  if (sizeof *disk_inode != BLOCK_SECTOR_SIZE){
-    printf("%d, %d\n", sizeof *disk_inode, BLOCK_SECTOR_SIZE);
-  }
   ASSERT (sizeof *disk_inode == BLOCK_SECTOR_SIZE);
 
   disk_inode = calloc (1, sizeof *disk_inode);

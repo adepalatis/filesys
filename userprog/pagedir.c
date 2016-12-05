@@ -54,8 +54,7 @@ pagedir_destroy (uint32_t *pd)
    created and a pointer into it is returned.  Otherwise, a null
    pointer is returned. */
 static uint32_t *
-lookup_page (uint32_t *pd, const void *vaddr, bool create)
-{
+lookup_page (uint32_t *pd, const void *vaddr, bool create){
   uint32_t *pt, *pde;
 
   ASSERT (pd != NULL);
@@ -136,7 +135,7 @@ pagedir_get_page (uint32_t *pd, const void *uaddr)
     return NULL;
 }
 
-/* Marks user virtual page UPAGE "not present" in page
+/* Marks user virtual page UPAGE "not present"  page
    directory PD.  Later accesses to the page will fault.  Other
    bits in the page table entry are preserved.
    UPAGE need not be mapped. */
