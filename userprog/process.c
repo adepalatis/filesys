@@ -111,28 +111,18 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  // struct thread* current = thread_current();
-  // struct thread* child = in_all_threads(child_tid);
-  // if (child==NULL){
-  //   return -1;
-  // }
-  // sema_init(&(child->waitSema),0);
-  // sema_down(&(child->waitSema));
-  // printf("%s\n", child->exitCode);
-  // struct thread* dead = in_grave(child_tid);
-  // return dead->exitCode;
   struct thread* current = thread_current();
   struct list* children = get_children();
   struct thread* child;
   struct thread* otherchild;
 
-  // Check if the given pid is a child of the current thread
+  // Fail if pid is not a direct child of the current process
   if((child = in_child_processes(children, child_tid))==NULL) {
     // printf("CHILD IS NULL\n");
     return -1;
   }
 
-  // Check if the process associated with "child_tid" was waited on before
+  // Fail if pid has already been waited on by current
   if(child->waited_on) {
     return -1;
   }
@@ -140,29 +130,21 @@ process_wait (tid_t child_tid UNUSED)
     child->waited_on = true;
   }
 
-  // Check if the child was terminated by the kernel
-  // if(!child->called_exit) {
-  //   return -1;
-  // }
-
-  // Check if the child already terminated
-  if((otherchild = in_grave(child_tid))==NULL) {
-    // Wait on the child
-    sema_down(&child->waitSema);
+  // See if pid is already terminated
+  if(in_grave(child_tid) != NULL) {
+    // Return pid's exit code if exited normally
+    if(child->called_exit) {
+      return child->exitCode;
+    }
+    // Fail if pid was terminated by the kernel
+    return -1;
   }
-  else {
-    sema_down(&child->waitSema);
-  }
-  
-  
-  if (child==NULL){
-    // printf("DEAD CHILD IS NULL\n");
-  }
-  int returnExit = child->exitCode;
+  // pid still running; wait for it to finish
+  sema_down(&child->waitSema);
+  int exitCode = child->exitCode;
   list_remove(&child->cochildren);
   sema_up(&child->dead);
-  // printf("DEAD SEMA UP SUCCESSFULLY******\n");
-  return returnExit;  
+  return exitCode;
 }
 
 /* Free the current process's resources. */

@@ -48,7 +48,6 @@ syscall_handler (struct intr_frame *f UNUSED)
 		exit(-1);
 	}
 
-	// printf("%04x\t %d\n", sp, syscall_num);
 	switch(syscall_num) {
 		case SYS_HALT:
 			halt();
@@ -101,9 +100,41 @@ syscall_handler (struct intr_frame *f UNUSED)
 		case SYS_CLOSE:
 			close(*(int*)(sp+1));
 			break;
+
+		case SYS_CHDIR:
+			break;
+
+		case SYS_MKDIR:
+			break;
+
+		case SYS_READDIR:
+			break;
+
+		case SYS_ISDIR:
+			break;
+
+		case SYS_INUMBER:
+			break;
 	}
 }
 
+/* Additional filesys sycalls */
+bool 
+chdir(const char* dir) {}
+
+bool
+mkdir(const char* dir) {}
+
+bool 
+readdir(int fd, char* name) {}
+
+bool
+isdir(int fd) {}
+
+int 
+inumber(int fd) {}
+
+/* All-purpose syscalls */
 void halt() {
 	shutdown_power_off();
 }
@@ -143,23 +174,8 @@ pid_t exec(const char* cmd_line) {
 }
 
 int wait(pid_t pid) {	
-	struct thread* thisThread = thread_current();
-	// printf("IN WAIT: %s\n", thisThread->name);
-	if (in_child_processes(&(thisThread->children), pid)==NULL){
-		return -1;
-	}
-	// printf("AFTER GET CHILD PROCESSES\n");
-	struct thread* dead;
-	if (in_all_threads(pid)!=NULL){
-		int toReturn = process_wait(pid);
-		return toReturn;
-	}
-	else if (dead = in_grave(pid) !=NULL) {
-		return dead->exitCode;
-	}
-	else{
-		return -1;
-	}
+	int toReturn = process_wait(pid);
+	return toReturn;
 }
 
 bool create(const char* file, unsigned initial_size) {
