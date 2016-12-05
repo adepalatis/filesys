@@ -12,6 +12,7 @@ static struct lock l;
 static struct lock file_lock;
 
 static void syscall_handler (struct intr_frame *);
+static int memread_helper(void* addr, void* dst, size_t bytes);
 int add_file(struct file* f);
 void close_and_remove_file(int fd);
 
@@ -102,28 +103,92 @@ syscall_handler (struct intr_frame *f UNUSED)
 			break;
 
 		case SYS_CHDIR:
+		{
+			const char* name;
+			if(!chillPtr(f->esp + 4)) {
+				exit(-1);
+			}
+			/* Get the specified name from the interrupt frame */
+			// memread_helper(f->esp + 4, &name, sizeof(name));
+			name = f->esp + 4;
+			f->eax = chdir(name);
 			break;
+		}
 
 		case SYS_MKDIR:
+		{
+			const char* name;
+			if(!chillPtr(f->esp + 4)) {
+				exit(-1);
+			}
+			/* Get the specified name from the interrupt frame */
+			// memread_helper(f->esp + 4, &name, sizeof(name));
+			name = f->esp + 4;
+			f->eax = mkdir(name);
 			break;
+		}
 
 		case SYS_READDIR:
+		{
+			int fd;
+			char* name;
+			if(!chillPtr(f->esp + 4) || !chillPtr(f->esp + 8)) {
+				exit(-1);
+			}
+			/* Get the specified name from the interrupt frame */
+			// memread_helper(f->esp + 4, &fd, sizeof(fd));
+			name = f->esp + 4;
+			/* Get the specified file descriptor from the interrupt frame */
+			// memread_helper(f->esp + 8, &name, sizeof(name));
+			fd = *((int*)(f->esp + 8));
+			f->eax = readdir(fd, name);
 			break;
+		}
 
 		case SYS_ISDIR:
+		{
+			int fd;
+			if(!chillPtr(f->esp + 4)) {
+				exit(-1);
+			}
+			/* Get the specified file descriptor from the interrupt frame */
+			// memread_helper(f->esp + 4, &fd, sizeof(fd));
+			fd = *((int*)(f->esp + 4));
+			f->eax = isdir(fd);
 			break;
+		}
 
 		case SYS_INUMBER:
+		{
 			break;
+		}
 	}
 }
 
 /* Additional filesys sycalls */
 bool 
-chdir(const char* dir) {}
+chdir(const char* dir) {
+	bool result;
+	if(!chillPtr(dir)) {
+		exit(-1);
+	}
+	lock_acquire(&l);
+	result = chdir(dir);
+	lock_release(&l);
+	return result;
+}
 
 bool
-mkdir(const char* dir) {}
+mkdir(const char* dir) {
+	bool result;
+	if(!chillPtr(dir)) {
+		exit(-1);
+	}
+	lock_acquire(&l);
+	result = filesys_create(dir, 0, true);
+	lock_release(&l);
+	return result;
+}
 
 bool 
 readdir(int fd, char* name) {}
@@ -186,7 +251,7 @@ bool create(const char* file, unsigned initial_size) {
 		exit(-1);
 	}
 
-	bool success = filesys_create(file, initial_size);
+	bool success = filesys_create(file, initial_size, false);
 
 	lock_release(&l);
 	return success;
@@ -374,3 +439,13 @@ void close_and_remove_file(int fd) {
 	}
 	lock_release(&file_lock);
 }
+
+// static int 
+// memread_helper(void* addr, void* dst, size_t bytes) {
+// 	for(size_t i; i < bytes; i++) {
+// 		int value = get_user(addr + i);
+
+// 		*(char*)(dst + i) = value & 0xff;
+// 	}
+// 	return (int)bytes;
+// }
