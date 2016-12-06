@@ -56,7 +56,8 @@ file_get_inode (struct file *file)
 /* Actually implement */
 struct file* get_file(int fd) {
   struct thread* th = thread_current();
-  struct file* f = th->fd_table[fd];
+  // struct file* f = th->fd_table[fd];
+  struct file* f = th->fd_table[fd]->file;
   return f;
 }
 

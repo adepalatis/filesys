@@ -194,7 +194,8 @@ mkdir(const char* dir) {
 bool 
 readdir(int fd, char* name) {
 	lock_acquire(&l);
-	struct inode* my_inode = file_get_inode(thread_current()->fd_table[fd]);
+	struct f_desc* file_d = thread_current()->fd_table[fd];
+	struct inode* my_inode = file_get_inode(file_d->file);
 	if(my_inode == NULL) {
 		lock_release(&l);
 		return false;
@@ -204,15 +205,16 @@ readdir(int fd, char* name) {
 		lock_release(&l);
 		return false;
 	}
-	// bool result = dir_readdir( , name);
+	bool result = dir_readdir(file_d->dir, name);
 	lock_release(&l);
-	// return result;
+	return result;
 }
 
 bool
 isdir(int fd) {
 	lock_acquire(&l);
-	struct inode* my_inode = file_get_inode(thread_current()->fd_table[fd]);
+	struct f_desc* file_d = thread_current()->fd_table[fd];
+	struct inode* my_inode = file_get_inode(file_d->file);
 	if(my_inode == NULL) {
 		lock_release(&l);
 		return false;
@@ -225,7 +227,9 @@ isdir(int fd) {
 int 
 inumber(int fd) {
 	lock_acquire(&l);
-	int result = inode_get_inumber(file_get_inode(thread_current()->fd_table[fd]));
+	struct f_desc* file_d = thread_current()->fd_table[fd];
+	struct inode* inode = file_get_inode(file_d->file);
+	int result = inode_get_inumber(inode);
 	lock_release(&l);
 	return result;
 }
@@ -446,7 +450,12 @@ int add_file(struct file* f) {
 	current->fd++;
 
 	list_push_back(open_file_list, &f->file_elem);
-	current->fd_table[f->fd] = f;
+	// current->fd_table[f->fd] = f;
+	struct f_desc* fd = malloc(sizeof(struct f_desc));
+	fd->fd = f->fd;
+	fd->file = f;
+	fd->is_dir = false;
+	current->fd_table[f->fd] = fd;
 
 	lock_release(&file_lock);
 	return f->fd;
@@ -470,13 +479,3 @@ void close_and_remove_file(int fd) {
 	}
 	lock_release(&file_lock);
 }
-
-// static int 
-// memread_helper(void* addr, void* dst, size_t bytes) {
-// 	for(size_t i; i < bytes; i++) {
-// 		int value = get_user(addr + i);
-
-// 		*(char*)(dst + i) = value & 0xff;
-// 	}
-// 	return (int)bytes;
-// }

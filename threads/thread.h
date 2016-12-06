@@ -26,6 +26,14 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+/* File descriptor */
+struct f_desc {
+  int fd;
+  struct file* file;
+  struct dir* dir;
+  bool is_dir;
+};
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -108,7 +116,8 @@ struct thread
     struct list open_file_list;
     struct list_elem cofiles;
     int fd;
-    struct file* fd_table[100];
+    // struct file* fd_table[100];
+    struct f_desc* fd_table[100];
 
     // struct semaphore child_wait;
 
@@ -123,7 +132,6 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
-
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
