@@ -74,11 +74,10 @@ int main (void) NO_RETURN;
 
 /* Pintos main program. */
 int
-main (void)
-{
+main (void) {
   char **argv;
 
-  /* Clear BSS. */  
+  /* Clear BSS. */
   bss_init ();
 
   /* Break command line into arguments and parse options. */
@@ -88,7 +87,7 @@ main (void)
   /* Initialize ourselves as a thread so we can use locks,
      then enable console locking. */
   thread_init ();
-  console_init ();  
+  console_init ();
 
   /* Greet user. */
   printf ("Pintos booting with %'"PRIu32" kB RAM...\n",
@@ -128,7 +127,7 @@ main (void)
 #endif
 
   printf ("Boot complete.\n");
-  
+
   /* Run actions specified on kernel command line. */
   run_actions (argv);
 
@@ -144,8 +143,7 @@ main (void)
    The start and end of the BSS segment is recorded by the
    linker as _start_bss and _end_bss.  See kernel.lds. */
 static void
-bss_init (void) 
-{
+bss_init (void) {
   extern char _start_bss, _end_bss;
   memset (&_start_bss, 0, &_end_bss - &_start_bss);
 }
@@ -155,30 +153,27 @@ bss_init (void)
    new page directory.  Points init_page_dir to the page
    directory it creates. */
 static void
-paging_init (void)
-{
+paging_init (void) {
   uint32_t *pd, *pt;
   size_t page;
   extern char _start, _end_kernel_text;
 
   pd = init_page_dir = palloc_get_page (PAL_ASSERT | PAL_ZERO);
   pt = NULL;
-  for (page = 0; page < init_ram_pages; page++)
-    {
-      uintptr_t paddr = page * PGSIZE;
-      char *vaddr = ptov (paddr);
-      size_t pde_idx = pd_no (vaddr);
-      size_t pte_idx = pt_no (vaddr);
-      bool in_kernel_text = &_start <= vaddr && vaddr < &_end_kernel_text;
+  for (page = 0; page < init_ram_pages; page++) {
+    uintptr_t paddr = page * PGSIZE;
+    char *vaddr = ptov (paddr);
+    size_t pde_idx = pd_no (vaddr);
+    size_t pte_idx = pt_no (vaddr);
+    bool in_kernel_text = &_start <= vaddr && vaddr < &_end_kernel_text;
 
-      if (pd[pde_idx] == 0)
-        {
-          pt = palloc_get_page (PAL_ASSERT | PAL_ZERO);
-          pd[pde_idx] = pde_create (pt);
-        }
-
-      pt[pte_idx] = pte_create_kernel (vaddr, !in_kernel_text);
+    if (pd[pde_idx] == 0) {
+      pt = palloc_get_page (PAL_ASSERT | PAL_ZERO);
+      pd[pde_idx] = pde_create (pt);
     }
+
+    pt[pte_idx] = pte_create_kernel (vaddr, !in_kernel_text);
+  }
 
   /* Store the physical address of the page directory into CR3
      aka PDBR (page directory base register).  This activates our
@@ -191,8 +186,7 @@ paging_init (void)
 /* Breaks the kernel command line into words and returns them as
    an argv-like array. */
 static char **
-read_command_line (void) 
-{
+read_command_line (void) {
   static char *argv[LOADER_ARGS_LEN / 2 + 1];
   char *p, *end;
   int argc;
@@ -201,14 +195,13 @@ read_command_line (void)
   argc = *(uint32_t *) ptov (LOADER_ARG_CNT);
   p = ptov (LOADER_ARGS);
   end = p + LOADER_ARGS_LEN;
-  for (i = 0; i < argc; i++) 
-    {
-      if (p >= end)
-        PANIC ("command line arguments overflow");
+  for (i = 0; i < argc; i++) {
+    if (p >= end)
+      PANIC ("command line arguments overflow");
 
-      argv[i] = p;
-      p += strnlen (p, end - p) + 1;
-    }
+    argv[i] = p;
+    p += strnlen (p, end - p) + 1;
+  }
   argv[argc] = NULL;
 
   /* Print kernel command line. */
@@ -226,43 +219,41 @@ read_command_line (void)
 /* Parses options in ARGV[]
    and returns the first non-option argument. */
 static char **
-parse_options (char **argv) 
-{
-  for (; *argv != NULL && **argv == '-'; argv++)
-    {
-      char *save_ptr;
-      char *name = strtok_r (*argv, "=", &save_ptr);
-      char *value = strtok_r (NULL, "", &save_ptr);
-      
-      if (!strcmp (name, "-h"))
-        usage ();
-      else if (!strcmp (name, "-q"))
-        shutdown_configure (SHUTDOWN_POWER_OFF);
-      else if (!strcmp (name, "-r"))
-        shutdown_configure (SHUTDOWN_REBOOT);
+parse_options (char **argv) {
+  for (; *argv != NULL && **argv == '-'; argv++) {
+    char *save_ptr;
+    char *name = strtok_r (*argv, "=", &save_ptr);
+    char *value = strtok_r (NULL, "", &save_ptr);
+
+    if (!strcmp (name, "-h"))
+      usage ();
+    else if (!strcmp (name, "-q"))
+      shutdown_configure (SHUTDOWN_POWER_OFF);
+    else if (!strcmp (name, "-r"))
+      shutdown_configure (SHUTDOWN_REBOOT);
 #ifdef FILESYS
-      else if (!strcmp (name, "-f"))
-        format_filesys = true;
-      else if (!strcmp (name, "-filesys"))
-        filesys_bdev_name = value;
-      else if (!strcmp (name, "-scratch"))
-        scratch_bdev_name = value;
+    else if (!strcmp (name, "-f"))
+      format_filesys = true;
+    else if (!strcmp (name, "-filesys"))
+      filesys_bdev_name = value;
+    else if (!strcmp (name, "-scratch"))
+      scratch_bdev_name = value;
 #ifdef VM
-      else if (!strcmp (name, "-swap"))
-        swap_bdev_name = value;
+    else if (!strcmp (name, "-swap"))
+      swap_bdev_name = value;
 #endif
 #endif
-      else if (!strcmp (name, "-rs"))
-        random_init (atoi (value));
-      else if (!strcmp (name, "-mlfqs"))
-        thread_mlfqs = true;
+    else if (!strcmp (name, "-rs"))
+      random_init (atoi (value));
+    else if (!strcmp (name, "-mlfqs"))
+      thread_mlfqs = true;
 #ifdef USERPROG
-      else if (!strcmp (name, "-ul"))
-        user_page_limit = atoi (value);
+    else if (!strcmp (name, "-ul"))
+      user_page_limit = atoi (value);
 #endif
-      else
-        PANIC ("unknown option `%s' (use -h for help)", name);
-    }
+    else
+      PANIC ("unknown option `%s' (use -h for help)", name);
+  }
 
   /* Initialize the random number generator based on the system
      time.  This has no effect if an "-rs" option was specified.
@@ -273,16 +264,15 @@ parse_options (char **argv)
      for reproducibility.  To fix this, give the "-r" option to
      the pintos script to request real-time execution. */
   random_init (rtc_get_time ());
-  
+
   return argv;
 }
 
 /* Runs the task specified in ARGV[1]. */
 static void
-run_task (char **argv)
-{
+run_task (char **argv) {
   const char *task = argv[1];
-  
+
   printf ("Executing '%s':\n", task);
 #ifdef USERPROG
   process_wait (process_execute (task));
@@ -295,59 +285,54 @@ run_task (char **argv)
 /* Executes all of the actions specified in ARGV[]
    up to the null pointer sentinel. */
 static void
-run_actions (char **argv) 
-{
+run_actions (char **argv) {
   /* An action. */
-  struct action 
-    {
-      char *name;                       /* Action name. */
-      int argc;                         /* # of args, including action name. */
-      void (*function) (char **argv);   /* Function to execute action. */
-    };
+  struct action {
+    char *name;                       /* Action name. */
+    int argc;                         /* # of args, including action name. */
+    void (*function) (char **argv);   /* Function to execute action. */
+  };
 
   /* Table of supported actions. */
-  static const struct action actions[] = 
-    {
-      {"run", 2, run_task},
+  static const struct action actions[] = {
+    {"run", 2, run_task},
 #ifdef FILESYS
-      {"ls", 1, fsutil_ls},
-      {"cat", 2, fsutil_cat},
-      {"rm", 2, fsutil_rm},
-      {"extract", 1, fsutil_extract},
-      {"append", 2, fsutil_append},
+    {"ls", 1, fsutil_ls},
+    {"cat", 2, fsutil_cat},
+    {"rm", 2, fsutil_rm},
+    {"extract", 1, fsutil_extract},
+    {"append", 2, fsutil_append},
 #endif
-      {NULL, 0, NULL},
-    };
+    {NULL, 0, NULL},
+  };
 
-  while (*argv != NULL)
-    {
-      const struct action *a;
-      int i;
+  while (*argv != NULL) {
+    const struct action *a;
+    int i;
 
-      /* Find action name. */
-      for (a = actions; ; a++)
-        if (a->name == NULL)
-          PANIC ("unknown action `%s' (use -h for help)", *argv);
-        else if (!strcmp (*argv, a->name))
-          break;
+    /* Find action name. */
+    for (a = actions; ; a++)
+      if (a->name == NULL)
+        PANIC ("unknown action `%s' (use -h for help)", *argv);
+      else if (!strcmp (*argv, a->name))
+        break;
 
-      /* Check for required arguments. */
-      for (i = 1; i < a->argc; i++)
-        if (argv[i] == NULL)
-          PANIC ("action `%s' requires %d argument(s)", *argv, a->argc - 1);
+    /* Check for required arguments. */
+    for (i = 1; i < a->argc; i++)
+      if (argv[i] == NULL)
+        PANIC ("action `%s' requires %d argument(s)", *argv, a->argc - 1);
 
-      /* Invoke action and advance. */
-      a->function (argv);
-      argv += a->argc;
-    }
-  
+    /* Invoke action and advance. */
+    a->function (argv);
+    argv += a->argc;
+  }
+
 }
 
 /* Prints a kernel command line help message and powers off the
    machine. */
 static void
-usage (void)
-{
+usage (void) {
   printf ("\nCommand line syntax: [OPTION...] [ACTION...]\n"
           "Options must precede actions.\n"
           "Actions are executed in the order specified.\n"
@@ -382,15 +367,14 @@ usage (void)
 #ifdef USERPROG
           "  -ul=COUNT          Limit user memory to COUNT pages.\n"
 #endif
-          );
+         );
   shutdown_power_off ();
 }
 
 #ifdef FILESYS
 /* Figure out what block devices to cast in the various Pintos roles. */
 static void
-locate_block_devices (void)
-{
+locate_block_devices (void) {
   locate_block_device (BLOCK_FILESYS, filesys_bdev_name);
   locate_block_device (BLOCK_SCRATCH, scratch_bdev_name);
 #ifdef VM
@@ -403,27 +387,22 @@ locate_block_devices (void)
    otherwise the first block device in probe order of type
    ROLE. */
 static void
-locate_block_device (enum block_type role, const char *name)
-{
+locate_block_device (enum block_type role, const char *name) {
   struct block *block = NULL;
 
-  if (name != NULL)
-    {
-      block = block_get_by_name (name);
-      if (block == NULL)
-        PANIC ("No such block device \"%s\"", name);
-    }
-  else
-    {
-      for (block = block_first (); block != NULL; block = block_next (block))
-        if (block_type (block) == role)
-          break;
-    }
+  if (name != NULL) {
+    block = block_get_by_name (name);
+    if (block == NULL)
+      PANIC ("No such block device \"%s\"", name);
+  } else {
+    for (block = block_first (); block != NULL; block = block_next (block))
+      if (block_type (block) == role)
+        break;
+  }
 
-  if (block != NULL)
-    {
-      printf ("%s: using %s\n", block_type_name (role), block_name (block));
-      block_set_role (role, block);
-    }
+  if (block != NULL) {
+    printf ("%s: using %s\n", block_type_name (role), block_name (block));
+    block_set_role (role, block);
+  }
 }
 #endif
