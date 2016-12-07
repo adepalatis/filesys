@@ -530,7 +530,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
-  t->fd = 2;
+  t->fd = 3;
   list_init(&t->open_file_list);
   list_init(&t->children);
 

@@ -14,6 +14,7 @@ static struct lock file_lock;
 
 static void syscall_handler (struct intr_frame *);
 static int memread_helper(void* addr, void* dst, size_t bytes);
+static struct f_desc* get_fd_struct(struct thread* t, int fd);
 int add_file(struct file* f);
 void close_and_remove_file(int fd);
 
@@ -174,7 +175,7 @@ chdir(const char* dir) {
 		exit(-1);
 	}
 	lock_acquire(&l);
-	result = chdir(dir);
+	result = filesys_chdir(dir);
 	lock_release(&l);
 	return result;
 }
@@ -194,7 +195,7 @@ mkdir(const char* dir) {
 bool 
 readdir(int fd, char* name) {
 	lock_acquire(&l);
-	struct f_desc* file_d = thread_current()->fd_table[fd];
+	struct f_desc* file_d = get_fd_struct(thread_current(), fd);
 	struct inode* my_inode = file_get_inode(file_d->file);
 	if(my_inode == NULL) {
 		lock_release(&l);
@@ -439,6 +440,15 @@ void close (int fd) {
 	lock_acquire(&l);
 	close_and_remove_file(fd);
 	lock_release(&l);
+}
+
+/* Helper Functions */
+static struct f_desc*
+get_fd_struct(struct thread* t, int fd) {
+	if(fd < 3) {
+		return NULL;
+	}
+  	return t->fd_table[fd];
 }
 
 int add_file(struct file* f) {
