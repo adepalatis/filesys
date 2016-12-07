@@ -15,7 +15,6 @@ static struct lock file_lock;
 static void syscall_handler (struct intr_frame *);
 static int memread_helper(void* addr, void* dst, size_t bytes);
 static struct f_desc* get_fd_struct(struct thread* t, int fd);
-int add_file(struct file* f);
 void close_and_remove_file(int fd);
 
 void
@@ -315,21 +314,28 @@ int open(const char* file) {
 		exit(-1);
 	}	
 
+	struct thread* current = thread_current();
+	struct f_desc* file_desc = malloc(sizeof(struct f_desc)); 
 	struct file* f = filesys_open(file);
 
 	if(!strcmp(thread_current()->name, file)) {
 		file_deny_write(f);
-	}
-
-	else if(f == NULL) {
+	} else if(f == NULL) {
 		lock_release(&l);
-
 		return -1;	// ALTERED FROM "RETURN -1" to "EXIT(-1)"
 	}
 
-	int fd = add_file(f);
+	struct list* open_file_list = &current->open_file_list;
+	f->fd = current->fd;
+	current->fd++;
+	list_push_back(open_file_list, &f->file_elem);
+	file_desc->fd = f->fd;
+	file_desc->file = f;
+	file_desc->is_dir = false;
+	current->fd_table[f->fd] = file_desc;
+
 	lock_release(&l);
-	return fd;
+	return file_desc->fd;
 }
 
 int filesize(int fd) {
@@ -449,26 +455,6 @@ get_fd_struct(struct thread* t, int fd) {
 		return NULL;
 	}
   	return t->fd_table[fd];
-}
-
-int add_file(struct file* f) {
-	lock_acquire(&file_lock);
-	struct thread* current = thread_current();
-	struct list* open_file_list = &current->open_file_list;
-
-	f->fd = current->fd;
-	current->fd++;
-
-	list_push_back(open_file_list, &f->file_elem);
-	// current->fd_table[f->fd] = f;
-	struct f_desc* fd = malloc(sizeof(struct f_desc));
-	fd->fd = f->fd;
-	fd->file = f;
-	fd->is_dir = false;
-	current->fd_table[f->fd] = fd;
-
-	lock_release(&file_lock);
-	return f->fd;
 }
 
 void close_and_remove_file(int fd) {
