@@ -7,6 +7,7 @@
 #include "filesys/inode.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
+#include "threads/thread.h"
 
 /* Partition that contains the file system. */
 struct block *fs_device;
@@ -90,6 +91,21 @@ filesys_remove (const char *name)
 
   return success;
 }
+
+/* Change curr_work_dir for the current thread */
+bool
+filesys_chdir(const char* name) {
+  struct dir* new_dir = dir_open_path(name);
+  /* Make sure there exists a directory by NAME */
+  if(new_dir == NULL) {
+    return false;
+  }
+  struct thread* t = thread_current();
+  dir_close(t->curr_work_dir);
+  t->curr_work_dir = new_dir;
+  return true;
+}
+
 
 /* Formats the file system. */
 static void
