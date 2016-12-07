@@ -124,7 +124,7 @@ dir_open_path(const char* path) {
     dir_close(curr_dir);
     curr_dir = next;
 
-    /*  */
+    /* Return NULL if the dir has been removed */
     if(dir_get_inode(curr_dir)->removed) {
       dir_close(curr_dir);
       return NULL;
