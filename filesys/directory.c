@@ -85,7 +85,7 @@ dir_get_inode (struct dir *dir)
 }
 
 /* Opens the directory given by PATH */
-bool 
+struct dir*
 dir_open_path(const char* path) {
   char* path_cpy = malloc(strlen(path) + 1);
   strlcpy(path_cpy, path, strlen(path) + 1);
