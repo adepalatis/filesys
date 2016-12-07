@@ -315,7 +315,10 @@ int open(const char* file) {
 	}	
 
 	struct thread* current = thread_current();
-	struct f_desc* file_desc = malloc(sizeof(struct f_desc)); 
+	struct f_desc* file_desc = palloc_get_page(0);
+	if(file_desc == NULL) {
+		return -1;
+	} 
 	struct file* f = filesys_open(file);
 
 	if(!strcmp(thread_current()->name, file)) {
@@ -323,6 +326,12 @@ int open(const char* file) {
 	} else if(f == NULL) {
 		lock_release(&l);
 		return -1;	// ALTERED FROM "RETURN -1" to "EXIT(-1)"
+	}
+
+	struct inode* inode = file_get_inode(f);
+	if(inode != NULL && inode->data.is_dir) {
+		file_desc->dir = dir_open(inode_reopen(inode));
+		file_desc->is_dir = true;
 	}
 
 	struct list* open_file_list = &current->open_file_list;
