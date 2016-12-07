@@ -120,7 +120,7 @@ static bool allocate_inode(struct inode_disk* disk) {
   }
   static char zeros[BLOCK_SECTOR_SIZE];
   int totalSectors = disk->length / BLOCK_SECTOR_SIZE;
-  if (totalSectors % BLOCK_SECTOR_SIZE > 0) {
+  if (disk->length % BLOCK_SECTOR_SIZE > 0) {
     totalSectors += 1;
   }
   if (totalSectors > NUM_DIRECT + NUM_I_BLOCKS + NUM_I_BLOCKS * NUM_I_BLOCKS) {
@@ -428,7 +428,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
     inode->data.length = offset + size;
     block_write (fs_device, inode->sector, &inode->data);
   }
-
+  inode->data.length = offset + size;
   while (size > 0) {
     /* Sector to write, starting byte offset within sector. */
     block_sector_t sector_idx = byte_to_sector (inode, offset);
