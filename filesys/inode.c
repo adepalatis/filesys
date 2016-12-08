@@ -268,10 +268,24 @@ inode_close (struct inode *inode) {
 
     /* Deallocate blocks if removed. */
     if (inode->removed) {
+      int sectors_to_free = bytes_to_sectors(inode->data.length);
+      struct inode_disk* idisk = &inode->data;
+      for (int i = 0; i<NUM_DIRECT && sectors_to_free>0; i++){
+        free_map_release (idisk->direct[i], 1);
+        sectors_to_free--;
+      }
+      if (sectors_to_free!=0){
+        struct block_list* indirect = calloc(1, sizeof(struct block_list));
+        block_read(fs_device, idisk->indirect, indirect);
+        for (int i = 0; i<NUM_I_BLOCKS && sectors_to_free>0; i++){
+          free_map_release (indirect->blocks[i], 1);
+          sectors_to_free--;
+        }
+        free_map_release (idisk->indirect, 1);
+        free(indirect);
+      }
       free_map_release (inode->sector, 1);
-      // free_map_release (inode->data.start, bytes_to_sectors (inode->data.length));
     }
-
     free (inode);
   }
 }

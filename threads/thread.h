@@ -117,7 +117,7 @@ struct thread
     struct list_elem cofiles;
     int fd;
     // struct file* fd_table[100];
-    struct f_desc* fd_table[100];
+    struct f_desc* fd_table[110];
 
     // struct semaphore child_wait;
 
