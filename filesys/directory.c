@@ -84,16 +84,17 @@ dir_get_inode (struct dir *dir)
   return dir->inode;
 }
 
+// CHANGE THIS
 /* Opens the directory given by PATH */
 struct dir*
 dir_open_path(const char* path) {
-  char* path_cpy = malloc(strlen(path) + 1);
-  strlcpy(path_cpy, path, strlen(path) + 1);
+  char* path_cpy = malloc(sizeof(char) * (strlen(path) + 1));
+  strlcpy(path_cpy, path, sizeof(char) * (strlen(path) + 1));
 
   struct dir* curr_dir;
 
   /* PATH is absolute */
-  if(path_cpy[0] == '/') {
+  if(path[0] == '/') {
     curr_dir = dir_open_root();
   }
   /* PATH is relative */
@@ -102,35 +103,69 @@ dir_open_path(const char* path) {
     if(curr_thread->curr_work_dir == NULL) {
       curr_dir = dir_open_root();
     } else {
-      curr_dir = dir_open(inode_reopen(curr_thread->curr_work_dir));
+      curr_dir = dir_open(inode_reopen(curr_thread->curr_work_dir->inode));
     }
   }
 
-  char* token, save_ptr;
+  char* token, *save_ptr;
   for(token = strtok_r(path_cpy, "/", &save_ptr); token != NULL; token = strtok_r(NULL, "/", &save_ptr)) {
     struct inode* inode = NULL;
 
     /* Directory given by PATH does not exist */
     if(!dir_lookup(curr_dir, token, &inode)) {
       dir_close(curr_dir);
+      free(path_cpy);
       return NULL;
     }
 
     struct dir* next = dir_open(inode);
     if(next == NULL) {
       dir_close(curr_dir);
+      free(path_cpy);
       return NULL;
     }
     dir_close(curr_dir);
     curr_dir = next;
-
-    /* Return NULL if the dir has been removed */
-    if(dir_get_inode(curr_dir)->removed) {
-      dir_close(curr_dir);
-      return NULL;
-    }
-    return curr_dir;
   }
+
+  /* Return NULL if the dir has been removed */
+  if(dir_get_inode(curr_dir)->removed) {
+    dir_close(curr_dir);
+    free(path_cpy);
+    return NULL;
+  }
+  free(path_cpy);
+  return curr_dir;
+}
+
+// CHANGE THIS
+/* Divides the absolute path into its path and file name */
+void
+separate_path_and_file(const char* path, char* directory, char* filename) {
+  char* path_cpy = malloc(sizeof(char) * (strlen(path) + 1));
+  strlcpy(path_cpy, path, sizeof(char) * (strlen(path) + 1));
+
+  // Handle absolute paths
+  char* dir = directory;
+  if(strlen(path) > 0 && path[0] == '/') {
+    if(dir) *dir++ = '/';
+  }
+
+  // tokenize
+  char *token, *save_ptr, *last_token = "";
+  for(token = strtok_r(path_cpy, "/", &save_ptr); token != NULL; token = strtok_r(NULL, "/", &save_ptr)) {
+    if(dir && strlen(last_token) > 0) {
+      strlcpy(dir, last_token, sizeof(char) * strlen(last_token));
+      // memcpy(dir, last_token, sizeof(char) * strlen(last_token));
+      dir[strlen(last_token)] = '/';
+      dir += strlen(last_token) + 1;
+    }
+    last_token = token;
+  }
+  if(dir) *dir = '\0';
+  strlcpy(filename, last_token, sizeof(char) * (strlen(last_token) + 1));
+  // memcpy(filename, last_token, sizeof(char) * (strlen(last_token) + 1));
+  free(path_cpy);
 }
 
 /* Searches DIR for a file with the given NAME.
