@@ -47,6 +47,8 @@ struct block_list {
   block_sector_t blocks[NUM_I_BLOCKS];
 };
 
+
+// CHANGE THISs
 static block_sector_t get_sector (const struct inode_disk *idisk, off_t index) {
   off_t index_max = 0;
   block_sector_t toReturn;
@@ -97,7 +99,6 @@ byte_to_sector (const struct inode *inode, off_t pos) {
     off_t index = pos / BLOCK_SECTOR_SIZE;
     return get_sector (&inode->data, index);
   }
-  // return inode->data.start + pos / BLOCK_SECTOR_SIZE;
   else {
     return -1;
   }
@@ -127,8 +128,10 @@ static bool allocate_inode(struct inode_disk* disk) {
     return false;
   }
   for (int i = 0; i < NUM_DIRECT && totalSectors > 0; i++) {
-    if (!free_map_allocate (1, &disk->direct[i])) {
-      return false;
+    if (disk->direct[i]==0){
+      if (!free_map_allocate (1, &disk->direct[i])) {
+        return false;
+      }
     }
     block_write (fs_device, disk->direct[i], zeros);
     totalSectors -= 1;
@@ -265,7 +268,7 @@ inode_close (struct inode *inode) {
 
     /* Deallocate blocks if removed. */
     if (inode->removed) {
-      // free_map_release (inode->sector, 1);
+      free_map_release (inode->sector, 1);
       // free_map_release (inode->data.start, bytes_to_sectors (inode->data.length));
     }
 
@@ -343,8 +346,8 @@ bool add_blocks_inode(struct inode* inode, off_t ofs) {
       if (!free_map_allocate (1, &disk->direct[directNum])) {
         return false;
       }
-      num_to_add--;
     }
+    num_to_add--;
   }
   if (num_to_add == 0) {return true;}
   // check if indirect already allocated. Allocate if not
@@ -362,8 +365,8 @@ bool add_blocks_inode(struct inode* inode, off_t ofs) {
       if (!free_map_allocate (1, &indirect->blocks[indNum])) {
         return false;
       }
-      num_to_add--;
     }
+    num_to_add--;
   }
   block_write(fs_device, disk->indirect, indirect);
   free(indirect);
@@ -395,8 +398,8 @@ bool add_blocks_inode(struct inode* inode, off_t ofs) {
         if (!free_map_allocate (1, &indirect->blocks[sec])) {
           return false;
         }
-        num_to_add--;
       }
+      num_to_add--;
     }
     block_write(fs_device, doubleInd->blocks[indNum], indirect);
     free(indirect);
@@ -422,7 +425,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
     return 0;
 
   if ( byte_to_sector(inode, offset + size - 1) == -1 ) {
-    if (!add_blocks_inode (& inode->data, offset + size)) {
+    if (!add_blocks_inode (inode, offset + size)) {
       return 0;
     }
     inode->data.length = offset + size;
