@@ -81,10 +81,15 @@ start_process (void *file_name_)
      // printf("LOAD DONE\n");
 	  /* If load failed, quit. */
 	  palloc_free_page (file_name);
-	  if (!success){
+    if (!success){
       // printf("NOT SUCCESS\n");
   		thread_exit ();
-      
+    }
+
+    if(thread_current()->parent != NULL && thread_current()->parent->curr_work_dir != NULL) {
+      thread_current()->curr_work_dir = dir_reopen(thread_current()->parent->curr_work_dir);
+    } else {
+      thread_current()->curr_work_dir = dir_open_root();
     }
 
 	  /* Start the user process by simulating a return from an

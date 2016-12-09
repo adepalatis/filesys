@@ -64,6 +64,7 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
   return success;
 }
 
+// CHANGE THIS
 /* Opens the file with the given NAME.
    Returns the new file if successful or a null pointer
    otherwise.
@@ -74,6 +75,35 @@ filesys_open (const char *name)
 {
   struct dir *dir = dir_open_root ();
   struct inode *inode = NULL;
+
+  // if(strlen(name) == 0) {
+  //   return NULL;
+  // }
+
+  // char direc[strlen(name) + 1], file_name[strlen(name) + 1];
+  // separate_path_and_file(name, direc, file_name);
+  // struct dir* dir = dir_open_path(direc);
+  // struct inode* inode = NULL;
+
+  // /* Return NULL if dir was removed */
+  // if(dir == NULL) {
+  //   return NULL;
+  // }
+
+  // if(strlen(file_name) > 0) {
+  //   dir_lookup(dir, file_name, &inode);
+  //   dir_close(dir);
+  // }
+  // /* If file_name is empty, get the inode of the opened directory */
+  // else {
+  //   inode = dir_get_inode(dir);
+  // }
+
+  // if(inode == NULL || inode->removed) {
+  //   return NULL;
+  // }
+
+  // return file_open(inode);
 
   if (dir != NULL)
     dir_lookup (dir, name, &inode);
@@ -89,9 +119,16 @@ filesys_open (const char *name)
 bool
 filesys_remove (const char *name) 
 {
-  struct dir *dir = dir_open_root ();
-  bool success = dir != NULL && dir_remove (dir, name);
-  dir_close (dir); 
+  // struct dir *dir = dir_open_root ();
+  // bool success = dir != NULL && dir_remove (dir, name);
+  // dir_close (dir); 
+
+  char direc[strlen(name)], file_name[strlen(name)];
+  separate_path_and_file(name, direc, file_name);
+  struct dir* dir = dir_open_path(direc);
+
+  bool success = (dir != NULL && dir_remove(dir, file_name));
+  dir_close(dir);
 
   return success;
 }
