@@ -72,7 +72,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 			break;
 
 		case SYS_REMOVE:
-			f->eax=remove((char*) (sp+1));
+			f->eax=remove(*(char**) (sp+1));
 			break;
 
 		case SYS_OPEN:
@@ -138,10 +138,10 @@ syscall_handler (struct intr_frame *f UNUSED)
 			}
 			/* Get the specified name from the interrupt frame */
 			// memread_helper(f->esp + 4, &fd, sizeof(fd));
-			name = f->esp + 4;
+			name = f->esp + 8;
 			/* Get the specified file descriptor from the interrupt frame */
 			// memread_helper(f->esp + 8, &name, sizeof(name));
-			fd = *((int*)(f->esp + 8));
+			fd = *((int*)(f->esp + 4));
 			f->eax = readdir(fd, *name);
 			break;
 		}
