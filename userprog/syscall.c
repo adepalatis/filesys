@@ -402,12 +402,16 @@ int read(int fd, void* buffer, unsigned size) {
 
 int write (int fd, const void *buffer, unsigned size) {
 	lock_acquire(&l);
-
 	if(!chillPtr(buffer)) {
 		lock_release(&l);
 		exit(-1);
 	}
-
+	struct thread* cur = thread_current();
+	struct f_desc* desc = cur->fd_table[fd];
+	if (fd > 2 && desc->file->inode->data.is_dir!=false){
+		lock_release(&l);
+		return -1;
+	}
 	if(fd == 0) {
 		lock_release(&l);
 		return 0;
