@@ -156,7 +156,7 @@ separate_path_and_file(const char* path, char* directory, char* filename) {
   char *token, *save_ptr, *last_token = "";
   for(token = strtok_r(path_cpy, "/", &save_ptr); token != NULL; token = strtok_r(NULL, "/", &save_ptr)) {
     if(dir && strlen(last_token) > 0) {
-      strlcpy(dir, last_token, sizeof(char) * strlen(last_token));
+      strlcpy(dir, last_token, sizeof(char) * (strlen(last_token)+1));
       // memcpy(dir, last_token, sizeof(char) * strlen(last_token));
       dir[strlen(last_token)] = '/';
       dir += strlen(last_token) + 1;

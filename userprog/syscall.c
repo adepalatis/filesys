@@ -105,34 +105,34 @@ syscall_handler (struct intr_frame *f UNUSED)
 
 		case SYS_CHDIR:
 		{
-			const char* name;
+			const char** name;
 			if(!chillPtr(f->esp + 4)) {
 				exit(-1);
 			}
 			/* Get the specified name from the interrupt frame */
 			// memread_helper(f->esp + 4, &name, sizeof(name));
 			name = f->esp + 4;
-			f->eax = chdir(name);
+			f->eax = chdir(*name);
 			break;
 		}
 
 		case SYS_MKDIR:
 		{
-			const char* name;
+			const char** name;
 			if(!chillPtr(f->esp + 4)) {
 				exit(-1);
 			}
 			/* Get the specified name from the interrupt frame */
 			// memread_helper(f->esp + 4, &name, sizeof(name));
 			name = f->esp + 4;
-			f->eax = mkdir(name);
+			f->eax = mkdir(*name);
 			break;
 		}
 
 		case SYS_READDIR:
 		{
 			int fd;
-			char* name;
+			char** name;
 			if(!chillPtr(f->esp + 4) || !chillPtr(f->esp + 8)) {
 				exit(-1);
 			}
@@ -142,7 +142,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 			/* Get the specified file descriptor from the interrupt frame */
 			// memread_helper(f->esp + 8, &name, sizeof(name));
 			fd = *((int*)(f->esp + 8));
-			f->eax = readdir(fd, name);
+			f->eax = readdir(fd, *name);
 			break;
 		}
 
