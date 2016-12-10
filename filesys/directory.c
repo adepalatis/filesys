@@ -318,6 +318,14 @@ dir_remove (struct dir *dir, const char *name)
   if (inode == NULL)
     goto done;
 
+  struct dir* thisDir = dir_open(inode);
+  if (thisDir != NULL){
+    char temp[NAME_MAX + 1];
+    if (dir_readdir(thisDir, temp)){
+      return false;
+    }
+  }
+
   /* Erase directory entry. */
   e.in_use = false;
   if (inode_write_at (dir->inode, &e, sizeof e, ofs) != sizeof e) 

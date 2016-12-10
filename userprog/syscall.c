@@ -231,7 +231,7 @@ inumber(int fd) {
 	struct inode* inode = file_get_inode(file_d->file);
 	int result = inode_get_inumber(inode);
 	lock_release(&l);
-	return result;
+	return (int) result;
 }
 
 /* All-purpose syscalls */
