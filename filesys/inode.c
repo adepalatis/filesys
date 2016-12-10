@@ -49,36 +49,32 @@ struct block_list {
 
 
 // CHANGE THISs
-static block_sector_t get_sector (const struct inode_disk *idisk, off_t index) {
-  off_t index_max = 0;
+static block_sector_t get_sector (const struct inode_disk *thedisk, off_t index) {
   block_sector_t toReturn;
 
   /**check direct**/
-  index_max = NUM_DIRECT;
-  if (index < index_max) {
-    return idisk->direct[index];
+  if (index < NUM_DIRECT) {
+    return thedisk->direct[index];
   }
 
   /** check indirect**/
-  index_max = NUM_DIRECT + NUM_I_BLOCKS;
-  if (index < index_max) {
+  if (index < NUM_DIRECT + NUM_I_BLOCKS) {
     struct block_list *indirect_block;
     indirect_block = calloc(1, sizeof(struct block_list));
-    block_read (fs_device, idisk->indirect, indirect_block);
+    block_read (fs_device, thedisk->indirect, indirect_block);
     toReturn = indirect_block->blocks[index - NUM_DIRECT];
     free(indirect_block);
     return toReturn;
   }
   /** check double indirect **/
-  index_max = NUM_DIRECT + NUM_I_BLOCKS + NUM_I_BLOCKS * NUM_I_BLOCKS;
-  if (index < index_max) {
+  if (index < NUM_DIRECT + NUM_I_BLOCKS + NUM_I_BLOCKS * NUM_I_BLOCKS) {
     off_t double_ptr =  (index - NUM_DIRECT - NUM_I_BLOCKS) / NUM_I_BLOCKS;
     off_t sing_ptr = (index - NUM_DIRECT - NUM_I_BLOCKS) % NUM_I_BLOCKS;
     struct block_list* indirect_idisk;
     struct block_list** double_disk;
     indirect_idisk = calloc(1, sizeof(struct block_list));
     double_disk = calloc(1, sizeof(struct block_list));
-    block_read (fs_device, idisk->double_indirect, double_disk);
+    block_read (fs_device, thedisk->double_indirect, double_disk);
     block_read (fs_device, double_disk[double_ptr], indirect_idisk);
     toReturn = indirect_idisk->blocks[sing_ptr];
     free(indirect_idisk);

@@ -89,8 +89,8 @@ dir_get_inode (struct dir *dir)
 /* Opens the directory given by PATH */
 struct dir*
 dir_open_path(const char* path) {
-  char* path_cpy = malloc(sizeof(char) * (strlen(path) + 1));
-  strlcpy(path_cpy, path, sizeof(char) * (strlen(path) + 1));
+  char* path_cpy = malloc(strlen(path) + 1);
+  strlcpy(path_cpy, path, strlen(path) + 1);
 
   struct dir* curr_dir;
 
@@ -104,13 +104,15 @@ dir_open_path(const char* path) {
     if(curr_thread->curr_work_dir == NULL) {
       curr_dir = dir_open_root();
     } else {
-      curr_dir = dir_open(inode_reopen(curr_thread->curr_work_dir->inode));
+      struct inode* holderInode = curr_thread->curr_work_dir->inode;
+      holderInode->open_cnt++;
+      curr_dir = dir_open(holderInode);
     }
   }
-
-  char* token, *save_ptr;
+  char* token;
+  char* save_ptr;
   for(token = strtok_r(path_cpy, "/", &save_ptr); token != NULL; token = strtok_r(NULL, "/", &save_ptr)) {
-    struct inode* inode = NULL;
+    struct inode* inode;
 
     /* Directory given by PATH does not exist */
     if(!dir_lookup(curr_dir, token, &inode)) {
@@ -130,7 +132,7 @@ dir_open_path(const char* path) {
   }
 
   /* Return NULL if the dir has been removed */
-  if(dir_get_inode(curr_dir)->removed) {
+  if(curr_dir->inode->removed) {
     dir_close(curr_dir);
     free(path_cpy);
     return NULL;
@@ -143,27 +145,29 @@ dir_open_path(const char* path) {
 /* Divides the absolute path into its path and file name */
 void
 separate_path_and_file(const char* path, char* directory, char* filename) {
-  char* path_cpy = malloc(sizeof(char) * (strlen(path) + 1));
-  strlcpy(path_cpy, path, sizeof(char) * (strlen(path) + 1));
+  char* path_cpy = malloc(strlen(path) + 1);
+  strlcpy(path_cpy, path, strlen(path) + 1);
 
   // Handle absolute paths
   char* dir = directory;
   if(strlen(path) > 0 && path[0] == '/') {
-    if(dir != NULL) *dir++ = '/';
+    if(dir != NULL){
+      *dir++ = '/';
+    }
   }
 
   // tokenize
   char *token, *save_ptr, *last_token = "";
   for(token = strtok_r(path_cpy, "/", &save_ptr); token != NULL; token = strtok_r(NULL, "/", &save_ptr)) {
     if(dir != NULL && strlen(last_token) > 0) {
-      strlcpy(dir, last_token, sizeof(char) * (strlen(last_token)+1));
+      strlcpy(dir, last_token, strlen(last_token)+1);
       dir[strlen(last_token)] = '/';
       dir += strlen(last_token) + 1;
     }
     last_token = token;
   }
   if(dir != NULL) *dir = '\0';
-  strlcpy(filename, last_token, sizeof(char) * (strlen(last_token) + 1));
+  strlcpy(filename, last_token, strlen(last_token) + 1);
   free(path_cpy);
 }
 
@@ -259,14 +263,15 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector, bool is
 
   // CHANGE THIS
   if(is_dir) {
-    struct dir* child_dir = dir_open(inode_open(inode_sector));
+    struct inode* tempInode = inode_open(inode_sector);
+    struct dir* child_dir = dir_open(tempInode);
     if(child_dir == NULL) {
-      goto done;
+      return success;
     }
-    e.inode_sector = inode_get_inumber(dir_get_inode(dir));
+    e.inode_sector = dir->inode->sector;
     if(inode_write_at(child_dir->inode, &e, sizeof e, 0) != sizeof(e)) {
       dir_close(child_dir);
-      goto done;
+      return success;
     }
     dir_close(child_dir);
   }
