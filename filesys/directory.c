@@ -8,11 +8,11 @@
 #include "threads/thread.h"
 
 /* A directory. */
-struct dir 
-  {
-    struct inode *inode;                /* Backing store. */
-    off_t pos;                          /* Current position. */
-  };
+// struct dir 
+//   {
+//     struct inode *inode;                 Backing store. 
+//     off_t pos;                          /* Current position. */
+//   };
 
 /* A single directory entry. */
 struct dir_entry 
@@ -149,23 +149,21 @@ separate_path_and_file(const char* path, char* directory, char* filename) {
   // Handle absolute paths
   char* dir = directory;
   if(strlen(path) > 0 && path[0] == '/') {
-    if(dir) *dir++ = '/';
+    if(dir != NULL) *dir++ = '/';
   }
 
   // tokenize
   char *token, *save_ptr, *last_token = "";
   for(token = strtok_r(path_cpy, "/", &save_ptr); token != NULL; token = strtok_r(NULL, "/", &save_ptr)) {
-    if(dir && strlen(last_token) > 0) {
+    if(dir != NULL && strlen(last_token) > 0) {
       strlcpy(dir, last_token, sizeof(char) * (strlen(last_token)+1));
-      // memcpy(dir, last_token, sizeof(char) * strlen(last_token));
       dir[strlen(last_token)] = '/';
       dir += strlen(last_token) + 1;
     }
     last_token = token;
   }
-  if(dir) *dir = '\0';
+  if(dir != NULL) *dir = '\0';
   strlcpy(filename, last_token, sizeof(char) * (strlen(last_token) + 1));
-  // memcpy(filename, last_token, sizeof(char) * (strlen(last_token) + 1));
   free(path_cpy);
 }
 

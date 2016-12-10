@@ -161,6 +161,14 @@ syscall_handler (struct intr_frame *f UNUSED)
 
 		case SYS_INUMBER:
 		{
+			int fd;
+			if(!chillPtr(f->esp + 4)) {
+				exit(-1);
+			}
+			/* Get the specified file descriptor from the interrupt frame */
+			// memread_helper(f->esp + 4, &fd, sizeof(fd));
+			fd = *((int*)(f->esp + 4));
+			f->eax = inumber(fd);
 			break;
 		}
 	}
@@ -184,6 +192,9 @@ mkdir(const char* dir) {
 	bool result;
 	if(!chillPtr(dir)) {
 		exit(-1);
+	}
+	if(strcmp(dir, "") == 0) {
+		return false;
 	}
 	lock_acquire(&l);
 	result = filesys_create(dir, 0, true);
