@@ -140,6 +140,11 @@ filesys_chdir(const char* name) {
   /* Make sure there exists a directory by NAME */
   if(new_dir == NULL) {
     return false;
+  } 
+
+  /* Make sure the directory wasn't removed */
+  else if(new_dir->inode->removed) {
+    return false;
   }
   struct thread* t = thread_current();
   dir_close(t->curr_work_dir);
