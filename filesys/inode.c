@@ -47,8 +47,6 @@ struct block_list {
   block_sector_t blocks[NUM_I_BLOCKS];
 };
 
-
-// CHANGE THISs
 static block_sector_t get_sector (const struct inode_disk *thedisk, off_t index) {
   block_sector_t toReturn;
 

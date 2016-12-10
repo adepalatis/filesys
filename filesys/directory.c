@@ -85,7 +85,6 @@ dir_get_inode (struct dir *dir)
   return dir->inode;
 }
 
-// CHANGE THIS
 /* Opens the directory given by PATH */
 struct dir*
 dir_open_path(const char* path) {
@@ -141,7 +140,6 @@ dir_open_path(const char* path) {
   return curr_dir;
 }
 
-// CHANGE THIS
 /* Divides the absolute path into its path and file name */
 void
 separate_path_and_file(const char* path, char* directory, char* filename) {
@@ -260,8 +258,7 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector, bool is
   /* Check that NAME is not in use. */
   if (lookup (dir, name, NULL, NULL))
     goto done;
-
-  // CHANGE THIS
+  
   if(is_dir) {
     struct inode* tempInode = inode_open(inode_sector);
     struct dir* child_dir = dir_open(tempInode);
